@@ -1,0 +1,199 @@
+#!/bin/bash
+has() { type -p "$1" >/dev/null && manager="$_"; }
+if [[ $EUID -eq 0 ]]; then
+    echo "Please do not run Rosetta as root. We will elevate for you if need be."
+    exit 1
+fi
+function arch() {
+    case "$1" in
+        install)
+            sudo pacman -S ${@:2}
+            ;;
+        remove)
+            sudo pacman -Rs ${@:2}
+            ;;
+        search)
+            sudo pacman -Ss ${@:2}
+            ;;
+        update)
+            sudo pacman -Syu
+            ;;
+        upgrade)
+            sudo pacman -Syu
+            ;;
+        clean-deps)
+            pacman -Qdtq  | sudo pacman -Rs -
+            ;;
+        download)
+            sudo pacman -Sw ${@:2}
+            ;;
+        info)
+            pacman -Si ${@:2}
+            ;;
+    esac
+}
+function fedora() {
+    case "$1" in
+        install)
+            sudo dnf install ${@:2}
+            ;;
+        remove)
+            sudo dnf remove ${@:2}
+            ;;
+        search)
+            dnf search ${@:2}
+            ;;
+        update)
+            sudo dnf upgrade
+            ;;
+        upgrade)
+            sudo dnf distro-sync
+            ;;
+        clean-deps)
+            sudo dnf autoremove
+            ;;
+        download)
+            sudo dnf download ${@:2}
+            ;;
+        info)
+            dnf info ${@:2}
+            ;;
+    esac
+}
+function debian() {
+    case "$1" in
+        install)
+            sudo apt install ${@:2}
+            ;;
+        remove)
+            sudo apt remove ${@:2}
+            ;;
+        search)
+            apt search ${@:2}
+            ;;
+        update)
+            sudo apt update && sudo apt upgrade
+            ;;
+        upgrade)
+            sudo apt update && sudo apt dist-upgrade
+            ;;
+        clean-deps)
+            sudo apt autoremove
+            ;;
+        download)
+            sudo apt download ${@:2}
+            ;;
+        info)
+            aptitude show ${@:2}
+            ;;
+    esac
+}
+function suse() {
+    case "$1" in
+        install)
+            sudo zypper install ${@:2}
+            ;;
+        remove)
+            sudo zypper remove ${@:2}
+            ;;
+        search)
+            zypper search ${@:2}
+            ;;
+        update)
+            sudo zypper up
+            ;;
+        upgrade)
+            sudo zypper dup
+            ;;
+        clean-deps)
+            sudo zypper rm -u
+            ;;
+        download)
+            sudo zypper install --download-only ${@:2}
+            ;;
+        info)
+            zypper info ${@:2}
+            ;;
+    esac
+}
+function gentoo() {
+    case "$1" in
+        install)
+            sudo emerge ${@:2}
+            ;;
+        remove)
+            sudo emerge -C ${@:2}
+            ;;
+        search)
+            emerge -S ${@:2}
+            ;;
+        update)
+            sudo emerge -u world
+            ;;
+        upgrade)
+            sudo emerge -uDN world
+            ;;
+        clean-deps)
+            sudo emerge --depclean
+            ;;
+        download)
+            sudo emerge --fetchonly ${@:2}
+            ;;
+        info)
+            emerge --info ${@:2}
+            ;;
+    esac
+}
+if has apt; then 
+    distrocmd="debian" 
+fi
+if has pacman; then 
+    distrocmd="arch"
+fi
+if has dnf; then 
+    distrocmd="fedora"
+fi
+if has zypper; then
+    distrocmd="suse"
+fi
+if has emerge; then 
+    distrocmd="gentoo" 
+fi
+function check() {
+    if [ -z "$2" ]
+    then
+        printf "\nPlease specify a package name.\n\n"
+        exit 1
+    fi
+}
+case "$1" in
+        install)
+            check $@
+            $distrocmd install ${@:2}
+            ;;
+        remove)
+            check $@
+            $distrocmd remove ${@:2}
+            ;;
+        search)
+            check $@
+            $distrocmd search ${@:2}
+            ;;
+        update)
+            $distrocmd update ${@:2}
+            ;;
+        upgrade)
+            $distrocmd upgrade ${@:2}
+            ;;
+        clean-deps)
+            $distrocmd clean-deps ${@:2}
+            ;;
+        download)
+            check $@
+            $distrocmd download ${@:2}
+            ;;
+        info)
+            check $@
+            $distrocmd info ${@:2}
+            ;;
+esac
